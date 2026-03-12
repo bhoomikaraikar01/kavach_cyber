@@ -61,8 +61,8 @@ export default function Index() {
     setIsAnalyzing(false);
   };
 
-  const handleReadAloud = () => {
-    if (!message.trim()) return;
+  const handleReadAloud = (textToRead: string) => {
+    if (!textToRead.trim()) return;
 
     if (isSpeaking) {
       window.speechSynthesis.cancel();
@@ -71,10 +71,11 @@ export default function Index() {
     }
 
     setIsSpeaking(true);
-    const utterance = new SpeechSynthesisUtterance(message);
-    const language = detectLanguage(message);
+    // Remove emoji and extra formatting for cleaner speech
+    const cleanText = textToRead.replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
+    const utterance = new SpeechSynthesisUtterance(cleanText);
 
-    utterance.lang = language;
+    utterance.lang = "en-US";
     utterance.rate = 0.95;
     utterance.pitch = 1;
     utterance.volume = 1;
@@ -238,40 +239,48 @@ export default function Index() {
                   <h4 className="text-sm font-semibold text-foreground/70 mb-3">
                     Analyzed Message:
                   </h4>
-                  <p className="text-foreground leading-relaxed mb-4 whitespace-pre-wrap">
+                  <p className="text-foreground leading-relaxed whitespace-pre-wrap">
                     {message}
                   </p>
-                  <button
-                    onClick={handleReadAloud}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition ${
-                      isSpeaking
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-primary/10 text-primary hover:bg-primary/20"
-                    }`}
-                  >
-                    <Volume2 className="w-4 h-4" />
-                    {isSpeaking ? "Stop Reading" : "Read Aloud"}
-                  </button>
                 </div>
 
-                {/* Risk Assessment */}
+                {/* Risk Assessment with Read Aloud */}
                 <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    {result.risk === "High" ? (
-                      <>
-                        <AlertTriangle className="w-6 h-6 text-red-500" />
-                        <span className="text-lg font-bold text-red-500">
-                          ⚠️ High Risk - Likely Scam
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle className="w-6 h-6 text-green-500" />
-                        <span className="text-lg font-bold text-green-500">
-                          ✓ Message Looks Safe
-                        </span>
-                      </>
-                    )}
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      {result.risk === "High" ? (
+                        <>
+                          <AlertTriangle className="w-6 h-6 text-red-500" />
+                          <span className="text-lg font-bold text-red-500">
+                            ⚠️ High Risk - Likely Scam
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="w-6 h-6 text-green-500" />
+                          <span className="text-lg font-bold text-green-500">
+                            ✓ Message Looks Safe
+                          </span>
+                        </>
+                      )}
+                    </div>
+                    <button
+                      onClick={() =>
+                        handleReadAloud(
+                          result.risk === "High"
+                            ? "High Risk Likely Scam"
+                            : "Message Looks Safe"
+                        )
+                      }
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition whitespace-nowrap ${
+                        isSpeaking
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-primary/10 text-primary hover:bg-primary/20"
+                      }`}
+                    >
+                      <Volume2 className="w-4 h-4" />
+                      {isSpeaking ? "Stop" : "Read"}
+                    </button>
                   </div>
 
                   <div className="mt-4">
