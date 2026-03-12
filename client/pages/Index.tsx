@@ -1,5 +1,34 @@
-import { useState } from "react";
-import { Shield, AlertTriangle, CheckCircle, Zap, Lock, Eye } from "lucide-react";
+import { useState, useRef } from "react";
+import { Shield, AlertTriangle, CheckCircle, Zap, Lock, Eye, Volume2 } from "lucide-react";
+
+const detectLanguage = (text: string): string => {
+  // Check for Kannada characters (U+0C80 to U+0CFF)
+  const kannadaRegex = /[\u0C80-\u0CFF]/g;
+  // Check for Hindi characters (U+0900 to U+097F)
+  const hindiRegex = /[\u0900-\u097F]/g;
+  // Check for Tamil characters (U+0B80 to U+0BFF)
+  const tamilRegex = /[\u0B80-\u0BFF]/g;
+
+  if (kannadaRegex.test(text)) return "kn-IN"; // Kannada
+  if (hindiRegex.test(text)) return "hi-IN"; // Hindi
+  if (tamilRegex.test(text)) return "ta-IN"; // Tamil
+  return "en-US"; // Default to English
+};
+
+const readAloud = (text: string) => {
+  // Cancel any ongoing speech
+  window.speechSynthesis.cancel();
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  const language = detectLanguage(text);
+
+  utterance.lang = language;
+  utterance.rate = 0.95;
+  utterance.pitch = 1;
+  utterance.volume = 1;
+
+  window.speechSynthesis.speak(utterance);
+};
 
 export default function Index() {
   const [message, setMessage] = useState("");
@@ -10,6 +39,8 @@ export default function Index() {
     message: string;
   } | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const speechRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   const analyzeMessage = async () => {
     if (!message.trim() && !url.trim()) {
@@ -28,6 +59,36 @@ export default function Index() {
 
     setResult(mockResult);
     setIsAnalyzing(false);
+  };
+
+  const handleReadAloud = () => {
+    if (!message.trim()) return;
+
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+
+    setIsSpeaking(true);
+    const utterance = new SpeechSynthesisUtterance(message);
+    const language = detectLanguage(message);
+
+    utterance.lang = language;
+    utterance.rate = 0.95;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+
+    utterance.onend = () => {
+      setIsSpeaking(false);
+    };
+
+    utterance.onerror = () => {
+      setIsSpeaking(false);
+    };
+
+    speechRef.current = utterance;
+    window.speechSynthesis.speak(utterance);
   };
 
   return (
@@ -171,7 +232,29 @@ export default function Index() {
 
             {/* Results */}
             {result && (
-              <div className="mt-8 pt-8 border-t border-border">
+              <div className="mt-8 pt-8 border-t border-border space-y-6">
+                {/* Display the analyzed message */}
+                <div className="bg-foreground/5 rounded-xl p-6 border border-border">
+                  <h4 className="text-sm font-semibold text-foreground/70 mb-3">
+                    Analyzed Message:
+                  </h4>
+                  <p className="text-foreground leading-relaxed mb-4 whitespace-pre-wrap">
+                    {message}
+                  </p>
+                  <button
+                    onClick={handleReadAloud}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition ${
+                      isSpeaking
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-primary/10 text-primary hover:bg-primary/20"
+                    }`}
+                  >
+                    <Volume2 className="w-4 h-4" />
+                    {isSpeaking ? "Stop Reading" : "Read Aloud"}
+                  </button>
+                </div>
+
+                {/* Risk Assessment */}
                 <div className="space-y-4">
                   <div className="flex items-center gap-3">
                     {result.risk === "High" ? (
